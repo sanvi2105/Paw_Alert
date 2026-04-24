@@ -1,17 +1,43 @@
 import React, { useState } from "react";
 import axios from "axios";
 
+import { MapContainer, TileLayer, Marker, useMapEvents } from "react-leaflet";
+
+// --------------------
+// CLICK MAP COMPONENT
+// --------------------
+function LocationPicker({ setPosition }) {
+  useMapEvents({
+    click(e) {
+      setPosition({
+        lat: e.latlng.lat,
+        lng: e.latlng.lng,
+      });
+    },
+  });
+
+  return null;
+}
+
 const Report = () => {
+
   const [form, setForm] = useState({
     name: "",
     phone: "",
     location: "",
+    urgency: "",
     description: "",
     file: null
   });
 
   const [loading, setLoading] = useState(false);
 
+  // 📍 clicked map position
+  const [position, setPosition] = useState(null);
+
+  // --------------------
+  // INPUT HANDLER
+  // --------------------
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
@@ -20,17 +46,33 @@ const Report = () => {
     setForm({ ...form, file: e.target.files[0] });
   };
 
+  // --------------------
+  // SUBMIT
+  // --------------------
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // ❗ validation
+    if (!position) {
+      alert("Please select location on map 📍");
+      return;
+    }
+
     setLoading(true);
 
     try {
       const data = new FormData();
+
       data.append("name", form.name);
       data.append("phone", form.phone);
       data.append("location", form.location);
+      data.append("urgency", form.urgency);
       data.append("description", form.description);
       data.append("file", form.file);
+
+      // 📍 clicked location
+      data.append("latitude", position.lat);
+      data.append("longitude", position.lng);
 
       const res = await axios.post(
         "http://localhost:8000/report",
@@ -41,28 +83,32 @@ const Report = () => {
           }
         }
       );
-      console.log(res.data);
-
-      alert("Prediction: " + res.data.prediction);
 
       alert(`Report submitted 🐶\nPrediction: ${res.data.prediction}`);
 
+      // reset
       setForm({
         name: "",
         phone: "",
         location: "",
+        urgency: "",
         description: "",
         file: null
       });
 
+      setPosition(null);
+
     } catch (error) {
-      alert("Error submitting report ❌");
       console.log(error);
+      alert("Error submitting report ❌");
     }
 
     setLoading(false);
   };
 
+  // --------------------
+  // UI
+  // --------------------
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-white px-4">
 
@@ -75,9 +121,30 @@ const Report = () => {
           🐾 PawAlert Report
         </h2>
 
-        <p className="text-center text-gray-500 mb-6">
-          Help rescue injured animals instantly
+        <p className="text-center text-gray-500 mb-4">
+          Click on map to mark injured animal location
         </p>
+
+        {/* ---------------- MAP ---------------- */}
+        <div className="mb-4">
+
+          <MapContainer
+            center={[28.61, 77.20]}
+            zoom={11}
+            style={{ height: "200px", width: "100%" }}
+          >
+
+            <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+
+            <LocationPicker setPosition={setPosition} />
+
+            {position && (
+              <Marker position={[position.lat, position.lng]} />
+            )}
+
+          </MapContainer>
+
+        </div>
 
         <input
           type="text"
@@ -99,19 +166,31 @@ const Report = () => {
           required
         />
 
+        <select
+          name="urgency"
+          value={form.urgency}
+          onChange={handleChange}
+          required
+          className="border p-3 w-full mb-3 rounded-lg"
+        >
+          <option value="">Select urgency</option>
+          <option value="low">Low</option>
+          <option value="medium">Medium</option>
+          <option value="high">High</option>
+        </select>
+
         <input
           type="text"
           name="location"
-          placeholder="Location (e.g. Delhi, street name)"
+          placeholder="Optional text location"
           value={form.location}
           onChange={handleChange}
           className="w-full mb-3 p-3 border rounded-lg"
-          required
         />
 
         <textarea
           name="description"
-          placeholder="Describe condition (injured, bleeding, etc.)"
+          placeholder="Describe condition"
           value={form.description}
           onChange={handleChange}
           className="w-full mb-3 p-3 border rounded-lg"
@@ -119,7 +198,6 @@ const Report = () => {
           required
         />
 
-        {/* IMAGE UPLOAD */}
         <input
           type="file"
           onChange={handleFileChange}

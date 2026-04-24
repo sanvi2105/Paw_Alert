@@ -1,23 +1,26 @@
-import os
-import numpy as np
-from tensorflow.keras.models import load_model
-from tensorflow.keras.preprocessing import image
+from ultralytics import YOLO
+from PIL import Image
 
-BASE_DIR = os.path.dirname(os.path.dirname(__file__))
-model_path = os.path.join(BASE_DIR, "model", "injured_dog_model.h5")
+# load model ONCE (good practice)
+model = YOLO("yolov8n.pt")
 
-model = load_model(model_path)
 
-class_names = ["normal", "injured"]
+def predict_image(image_path):
+    image = Image.open(image_path)
 
-def predict_image(img_path):
-    img = image.load_img(img_path, target_size=(224, 224))
-    img_array = image.img_to_array(img)
-    img_array = np.expand_dims(img_array, axis=0) / 255.0
+    results = model(image)
 
-    prediction = model.predict(img_array)[0][0]
+    detections = []
 
-    if prediction > 0.5:
-        return "injured"
-    else:
-        return "normal"
+    for r in results:
+        for box in r.boxes:
+            cls = int(box.cls[0])
+            label = model.names[cls]
+            conf = float(box.conf[0])
+
+            detections.append({
+                "label": label,
+                "confidence": conf
+            })
+
+    return detections

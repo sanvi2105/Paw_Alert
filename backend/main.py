@@ -1,15 +1,22 @@
+import os
 from fastapi import FastAPI, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-import shutil
-import os
+from dotenv import load_dotenv
+from pymongo import MongoClient
+from bson import ObjectId
 
-from database import reports_collection
 from utils.predict import predict_image
+
+load_dotenv()
+MONGO_URI = os.getenv("MONGO_URI")
+
+client = MongoClient(MONGO_URI)
+db = client["mydb"]
+reports_collection = db["reports"]
 
 app = FastAPI()
 
-# ---------------- CORS (React connection) ----------------
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -18,73 +25,67 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ---------------- Upload folder ----------------
-UPLOAD_DIR = "uploads"
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+UPLOAD_DIR = os.path.join(BASE_DIR, "uploads")
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
-# Serve uploaded images so React can access them
-app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
+app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
 
-
-# ---------------- ROOT ----------------
-@app.get("/")
-def home():
-    return {"message": "🐾 PawAlert API is running"}
-
-
-# ---------------- REPORT DOG API ----------------
 
 @app.post("/report")
-async def report_dog(
+async def report(
     name: str = Form(...),
     phone: str = Form(...),
     location: str = Form(...),
+    urgency: str = Form(...),
     description: str = Form(...),
+    latitude: float = Form(...),
+    longitude: float = Form(...),
     file: UploadFile = File(...)
 ):
+    filename = os.path.basename(file.filename)
+    file_path = os.path.join(UPLOAD_DIR, filename)
 
-    try:
-        # Save image
-        file_path = f"{UPLOAD_DIR}/{file.filename}"
+    with open(file_path, "wb") as buffer:
+        buffer.write(await file.read())
 
-        with open(file_path, "wb") as buffer:
-            shutil.copyfileobj(file.file, buffer)
+    prediction = predict_image(file_path)
 
-        # AI prediction (SAFE CALL)
-        try:
-            prediction = predict_image(file_path)
-        except Exception as e:
-            print("Prediction error:", e)
-            prediction = "unknown"
+    image_url = f"/uploads/{filename}"
 
-        urgency = "red" if prediction == "injured" else "green"
+    result = reports_collection.insert_one({
+        "name": name,
+        "phone": phone,
+        "location": location,
+        "urgency": urgency,
+        "description": description,
+        "latitude": latitude,
+        "longitude": longitude,
+        "image_url": image_url,
+        "prediction": prediction,
+        "status": "not helped"
+    })
 
-        report = {
-            "name": name,
-            "phone": phone,
-            "location": location,
-            "description": description,
-            "image_path": file.filename,
-            "prediction": prediction,
-            "status": "not helped",
-            "urgency": urgency
-        }
+    return {
+        "message": "Report submitted successfully",
+        "prediction": prediction,
+        "image_url": image_url,
+        "id": str(result.inserted_id)
+    }
 
-        reports_collection.insert_one(report)
 
-        return {
-            "message": "Report submitted successfully 🐶",
-            "prediction": prediction
-        }
-
-    except Exception as e:
-        print("ERROR IN /report:", e)
-        return {"error": str(e)}
-    
-    
-
-# ---------------- GET ALL REPORTS ----------------
 @app.get("/reports")
 def get_reports():
-    data = list(reports_collection.find({}, {"_id": 0}))
-    return {"reports": data}
+    data = list(reports_collection.find({}))
+    for d in data:
+        d["_id"] = str(d["_id"])
+    return data
+
+
+@app.put("/update-status")
+async def update_status(id: str = Form(...), status: str = Form(...)):
+    reports_collection.update_one(
+        {"_id": ObjectId(id)},
+        {"$set": {"status": status}}
+    )
+    return {"message": "Status updated"}
