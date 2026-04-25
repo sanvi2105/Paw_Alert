@@ -1,10 +1,9 @@
 import React, { useState } from "react";
 import axios from "axios";
-
 import { MapContainer, TileLayer, Marker, useMapEvents } from "react-leaflet";
 
 // --------------------
-// CLICK MAP COMPONENT
+// MAP CLICK HANDLER
 // --------------------
 function LocationPicker({ setPosition }) {
   useMapEvents({
@@ -20,19 +19,16 @@ function LocationPicker({ setPosition }) {
 }
 
 const Report = () => {
-
   const [form, setForm] = useState({
     name: "",
     phone: "",
     location: "",
     urgency: "",
     description: "",
-    file: null
+    file: null,
   });
 
   const [loading, setLoading] = useState(false);
-
-  // 📍 clicked map position
   const [position, setPosition] = useState(null);
 
   // --------------------
@@ -52,9 +48,8 @@ const Report = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // ❗ validation
     if (!position) {
-      alert("Please select location on map 📍");
+      alert("Please select location on map");
       return;
     }
 
@@ -70,37 +65,31 @@ const Report = () => {
       data.append("description", form.description);
       data.append("file", form.file);
 
-      // 📍 clicked location
+      // send lat/lng
       data.append("latitude", position.lat);
       data.append("longitude", position.lng);
 
       const res = await axios.post(
-        "http://localhost:8000/report",
-        data,
-        {
-          headers: {
-            "Content-Type": "multipart/form-data"
-          }
-        }
+        "https://pawalert-backend-68zf.onrender.com/report",
+        data
       );
 
-      alert(`Report submitted 🐶\nPrediction: ${res.data.prediction}`);
+      alert(`Report submitted\nPrediction: ${res.data.prediction}`);
 
-      // reset
+      // reset form
       setForm({
         name: "",
         phone: "",
         location: "",
         urgency: "",
         description: "",
-        file: null
+        file: null,
       });
 
       setPosition(null);
-
     } catch (error) {
       console.log(error);
-      alert("Error submitting report ❌");
+      alert("Error submitting report");
     }
 
     setLoading(false);
@@ -111,40 +100,39 @@ const Report = () => {
   // --------------------
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-white px-4">
-
       <form
         onSubmit={handleSubmit}
         className="bg-white shadow-2xl rounded-2xl p-8 w-full max-w-md"
       >
-
         <h2 className="text-3xl font-bold mb-2 text-center">
-          🐾 PawAlert Report
+          PawAlert Report
         </h2>
 
         <p className="text-center text-gray-500 mb-4">
           Click on map to mark injured animal location
         </p>
 
-        {/* ---------------- MAP ---------------- */}
+        {/* MAP */}
         <div className="mb-4">
-
           <MapContainer
             center={[28.61, 77.20]}
             zoom={11}
             style={{ height: "200px", width: "100%" }}
           >
-
             <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
 
             <LocationPicker setPosition={setPosition} />
 
-            {position && (
-              <Marker position={[position.lat, position.lng]} />
-            )}
-
+            {position && <Marker position={[position.lat, position.lng]} />}
           </MapContainer>
-
         </div>
+
+        {/* SHOW SELECTED COORDINATES */}
+        {position && (
+          <p className="text-sm text-green-600 mb-2 text-center">
+            Selected: {position.lat.toFixed(4)}, {position.lng.toFixed(4)}
+          </p>
+        )}
 
         <input
           type="text"
@@ -182,7 +170,7 @@ const Report = () => {
         <input
           type="text"
           name="location"
-          placeholder="Optional text location"
+          placeholder="Optional location (text)"
           value={form.location}
           onChange={handleChange}
           className="w-full mb-3 p-3 border rounded-lg"
@@ -210,11 +198,9 @@ const Report = () => {
           disabled={loading}
           className="w-full bg-black text-white py-3 rounded-lg hover:bg-gray-800"
         >
-          {loading ? "Submitting..." : "🚨 Submit Report"}
+          {loading ? "Submitting..." : "Submit Report"}
         </button>
-
       </form>
-
     </div>
   );
 };

@@ -54,7 +54,7 @@ const Map = () => {
   // --------------------
   const fetchReports = async () => {
     try {
-      const res = await axios.get("http://localhost:8000/reports");
+      const res = await axios.get("https://pawalert-backend-68zf.onrender.com/reports");
 
       // IMPORTANT: ensure array safety
       if (Array.isArray(res.data)) {

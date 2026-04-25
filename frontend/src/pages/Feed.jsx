@@ -10,7 +10,7 @@ const Feed = () => {
 
   const fetchReports = async () => {
     try {
-      const res = await axios.get("http://127.0.0.1:8000/reports");
+      const res = await axios.get("https://pawalert-backend-68zf.onrender.com/reports");
 
       console.log("API DATA:", res.data);
 
@@ -31,7 +31,7 @@ const Feed = () => {
       formData.append("id", id);
       formData.append("status", newStatus);
 
-      await axios.put("http://127.0.0.1:8000/update-status", formData);
+      await axios.put("https://pawalert-backend-68zf.onrender.com/update-status", formData);
 
       fetchReports();
     } catch (err) {
@@ -61,9 +61,9 @@ const Feed = () => {
             {/* IMAGE */}
             <img
               src={
-                item.image_url
-                  ? `http://127.0.0.1:8000${item.image_url}`
-                  : "https://via.placeholder.com/300x200"
+              item.image_url
+              ? `https://pawalert-backend-68zf.onrender.com${item.image_url}`
+                   : "https://via.placeholder.com/300x200"
               }
               alt="dog"
               className="w-full h-48 object-cover"

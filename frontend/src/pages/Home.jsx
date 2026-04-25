@@ -1,5 +1,5 @@
 import React from "react";
-import HeroImg from "../assets/dog_img.jpg";
+import HeroImg from "../assets/dog6_img.jpg";
 import { FaPlay } from "react-icons/fa";
 
 const Home = () => {
@@ -10,10 +10,10 @@ const Home = () => {
     >
 
       {/* DARK OVERLAY (IMPORTANT FOR TEXT VISIBILITY) */}
-      <div className="absolute inset-0 bg-black/10"></div>
+      <div className="absolute inset-0 bg-black/5"></div>
 
       {/* CONTENT */}
-      <div className="relative z-10 text-center px-6 max-w-3xl text-white">
+      <div className="relative z-10 text-center px-6 max-w-3xl text-black">
 
         <p className="uppercase text-red-400 font-semibold mb-4">
           Save Lives. Report Injured Animals.
@@ -23,7 +23,7 @@ const Home = () => {
           Helping Injured Dogs Find Care Faster
         </h1>
 
-        <p className="mb-8 text-gray-200">
+        <p className="mb-8 text-black-200">
           PawAlert helps people report injured animals instantly, mark exact
           locations on map, and connect with NGOs for faster rescue.
         </p>
